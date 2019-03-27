@@ -1,8 +1,13 @@
 const HtmlWebPackPlugin = require("html-webpack-plugin");
+var path = require('path');
 
 module.exports = {
   watch: true,
   entry: ['babel-polyfill', './demo/index.js'],
+  output: {
+    path: path.resolve(__dirname, './docs'),
+    filename: 'main.js',
+  },
   devtool: 'source-map',
   resolve: {
     extensions: ['.js', '.json', '.jsx', '.css', '.scss'],
