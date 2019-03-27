@@ -3650,7 +3650,7 @@ export const tableMetaData = () => ({
   },
   enableRowSelection: true,
   enableAllRowSelection: true,
-  recordsPerPage: 25,
+  recordsPerPage: 5,
   drawerPosition: 'top',
   includeAllInGlobalFilter: false,
   includeGlobalFilter: true,
