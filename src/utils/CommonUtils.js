@@ -1,4 +1,5 @@
 import cloneDeep from 'lodash/cloneDeep';
+import orderBy from 'lodash/orderBy';
 
 export const addUniqueKey = (data) => {
   let id = 0;
@@ -8,6 +9,7 @@ export const addUniqueKey = (data) => {
   });
   return data;
 };
+
 
 export const isEmpty = (data) => {
   for (const key in data) {
@@ -40,4 +42,52 @@ export const paginatedData = ({ currentData, recordsPerPage, currentPage }) => {
   }
 
   return [];
+};
+
+export const getSortedData = ({ columnName, columnType, sortOrder, data, emptyCells }) => {
+  let dataCopy = cloneDeep(data);
+  if (columnType === 'Number') {
+    let numericValues = [];
+    const emptyValues = [];
+    let otherData = [];
+    dataCopy.forEach((object) => {
+      if (object[columnName] === '' || object[columnName] === emptyCells) {
+        emptyValues.push(object);
+      } else if (!isNaN(object[columnName])) {
+        numericValues.push(object);
+      } else {
+        otherData.push(object);
+      }
+    });
+    if (!isEmpty(numericValues)) {
+      numericValues = orderBy(numericValues, columnName, sortOrder);
+    }
+    if (!isEmpty(otherData)) {
+      otherData = orderBy(otherData, columnName, sortOrder);
+    }
+    if (sortOrder === 'asc') {
+      dataCopy = emptyValues.concat(otherData).concat(numericValues);
+    } else if (sortOrder === 'desc') {
+      dataCopy = numericValues.concat(otherData).concat(emptyValues);
+    }
+  } else if (columnType === 'string') {
+    const emptyValues = [];
+    let stringValues = [];
+    dataCopy.forEach((object) => {
+      if (object[columnName] === '' || object[columnName] === emptyCells) {
+        emptyValues.push(object);
+      } else {
+        stringValues.push(object);
+      }
+    });
+    if (!isEmpty(stringValues)) {
+      stringValues = orderBy(stringValues, columnName, sortOrder);
+    }
+    if (sortOrder === 'asc') {
+      dataCopy = emptyValues.concat(stringValues);
+    } else if (sortOrder === 'desc') {
+      dataCopy = stringValues.concat(emptyValues);
+    }
+  }
+  return dataCopy;
 };

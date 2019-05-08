@@ -16,6 +16,7 @@ class TableHeader extends Component {
     this.state = {
       sortOrder: props.sort.sortOrder,
       columnKey: props.sort.columnName,
+      emptyCells: props.sort.emptyCells,
     };
     this.onClickSort = this.onClickSort.bind(this);
     this.getSortIcon = this.getSortIcon.bind(this);
@@ -32,31 +33,33 @@ class TableHeader extends Component {
     }
   }
 
-  setSortObject(columnName) {
-    this.props.setSortObject(columnName, this.state.sortOrder);
+  setSortObject(columnName, columnType, emptyCells) {
+    this.props.setSortObject(columnName, this.state.sortOrder, columnType, emptyCells);
   }
 
-  onClickSort(columnName, disableFilter) {
+  onClickSort(columnName, disableFilter, columnType, emptyCells) {
     if (!disableFilter) {
       this.setState({
         columnKey: columnName,
+        // If current sort order is ascending then assign next sort order to descending
+        // else ascending
         sortOrder: this.state.sortOrder = (this.state.sortOrder === 'asc') ? 'desc' : 'asc',
       });
-      this.props.onSort(columnName);
-      this.setSortObject(columnName);
+      this.props.onSort(columnName, columnType, emptyCells);
+      this.setSortObject(columnName, columnType, emptyCells);
     }
   }
   getSortIcon(eachColumnKey) {
     if (eachColumnKey === this.state.columnKey && this.state.sortOrder === 'desc') {
       return (
-        <span className="sort-order-up">
-          <FaArrowUp />
+        <span className="sort-order-down">
+          <FaArrowDown />
         </span>
       );
     } else if (eachColumnKey === this.state.columnKey && this.state.sortOrder === 'asc') {
       return (
-        <span className="sort-order-down">
-          <FaArrowDown />
+        <span className="sort-order-up">
+          <FaArrowUp />
         </span>
       );
     }

@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import orderBy from 'lodash/orderBy';
 import isEqual from 'lodash/isEqual';
 import isEmpty from 'lodash/isEmpty';
 
@@ -9,9 +8,9 @@ import TableHeader from './TableHeader';
 import TableBody from './TableBody';
 import TableDrawer from './TableDrawer';
 import TableFooter from './TableFooter';
-import { paginatedData, getNoOfPages } from '../.././utils/CommonUtils';
+import { paginatedData, getNoOfPages, getSortedData } from '../.././utils/CommonUtils';
 import '../../datagrid.css';
-
+import CustomLoader from './CustomLoader';
 /**
  * The Table component for the grid which will render -
  * TableDrawer, TableHeader, TableBody and TableFooter.
@@ -21,23 +20,22 @@ import '../../datagrid.css';
  */
 class Table extends Component {
   constructor(props) {
-    const {
-      data,
-      metaData,
-    } = props;
     super(props);
     this.state = {
       allCheckBox: false,
       currentPage: 1,
-      recordsPerPage: metaData.recordsPerPage,
+      recordsPerPage: props.metaData.recordsPerPage,
       appliedFilter: {},
-      originalData: data,
-      currentData: data,
-      originalMetaData: metaData,
-      currentMetaData: metaData,
+      originalData: props.data,
+      currentData: props.data,
+      originalMetaData: props.metaData,
+      currentMetaData: props.metaData,
+      isLoading: false,
       sort: {
         sortOrder: '',
         columnName: '',
+        columnType: '',
+        emptyCells: '',
       },
     };
     this.onSearch = this.onSearch.bind(this);
@@ -49,12 +47,23 @@ class Table extends Component {
     this.setSortObject = this.setSortObject.bind(this);
     this.handleAllCheckBoxChange = this.handleAllCheckBoxChange.bind(this);
     this.handleSingleCheckBoxChange = this.handleSingleCheckBoxChange.bind(this);
+    this.renderLoader = this.renderLoader.bind(this);
+    this.handleSelectedRows = this.handleSelectedRows.bind(this);
   }
 
   componentWillReceiveProps(nextProps) {
-    if (!isEqual(nextProps.data, this.props.data) || !isEqual(nextProps.metaData, this.props.metaData)) {
+    const { columnName, columnType, sortOrder, emptyCells } = this.state.sort;
+    if (!isEqual(nextProps.data, this.props.data)
+      || !isEqual(nextProps.metaData, this.props.metaData)) {
       let temporaryData = filterData(this.state.appliedFilter, nextProps.data);
-      temporaryData = orderBy(temporaryData, this.state.sort.columnName, this.state.sort.sortOrder);
+      temporaryData = getSortedData(
+        {
+          columnName,
+          columnType,
+          sortOrder,
+          data: temporaryData,
+          emptyCells,
+        });
       this.setState({
         originalData: nextProps.data,
         currentData: temporaryData,
@@ -64,34 +73,36 @@ class Table extends Component {
       });
     }
   }
-  setSortObject(columnName, sortOrder) {
+
+  setSortObject(columnName, sortOrder, columnType, emptyCells) {
     this.setState({
       sort: {
         ...this.state.sort,
         columnName,
         sortOrder,
+        columnType,
+        emptyCells,
       },
     });
   }
-  handleAllCheckBoxChange() {
-    let selectedRows = [];
-    const temporaryAllCheck = !this.state.allCheckBox;
-    if (temporaryAllCheck) {
-      selectedRows = this.state.currentData.map(currentDataObj => (
-        { ...currentDataObj, isChecked: true }
-      ));
-      this.setState({
-        allCheckBox: temporaryAllCheck,
-      });
-    } else if (!temporaryAllCheck) {
-      selectedRows = this.state.currentData.map(currentDataObj => (
-        { ...currentDataObj, isChecked: false }
-      ));
-      this.setState({
-        allCheckBox: temporaryAllCheck,
-      });
-    }
+
+  handleSelectedRows(selectedRows, temporaryAllCheck) {
+    this.setState({
+      isLoading: false,
+      allCheckBox: temporaryAllCheck,
+    });
     this.props.getSelectedRow(selectedRows);
+  }
+
+  handleAllCheckBoxChange() {
+    this.setState({
+      isLoading: true,
+    });
+    const temporaryAllCheck = !this.state.allCheckBox;
+    const selectedRows = this.state.currentData.map(currentDataObj => (
+      { ...currentDataObj, isChecked: temporaryAllCheck }
+    ));
+    setTimeout(() => this.handleSelectedRows(selectedRows, temporaryAllCheck), 100);
   }
 
   handleSingleCheckBoxChange(event, data) {
@@ -131,17 +142,27 @@ class Table extends Component {
       sort: {
         sortOrder: '',
         columnName: '',
+        columnType: '',
+        emptyCells: '',
       },
     });
   }
 
   onFilterChange(inputValue) {
+    const { columnName, columnType, sortOrder, emptyCells } = this.state.sort;
     let { appliedFilter } = this.state;
     appliedFilter = {
       ...appliedFilter,
       [inputValue.selectedColumn]: inputValue.searchString,
     };
-    let temporaryData = orderBy(this.state.originalData, this.state.sort.columnName, this.state.sort.sortOrder)
+    const temporaryData = getSortedData(
+      {
+        columnName,
+        columnType,
+        sortOrder,
+        data: this.state.originalData,
+        emptyCells,
+      });
     this.setState({
       appliedFilter,
       currentData: filterData(appliedFilter, temporaryData),
@@ -157,26 +178,43 @@ class Table extends Component {
     });
   }
 
-  onSort(columnId) {
+  onSort(columnId, columnType, emptyCells) {
+    // If current sort order is ascending then assign next sort order to descending
     if (this.state.sort.sortOrder === 'asc') {
-      const sortedData = orderBy(this.state.currentData, [columnId], ['desc']);
+      const sortedData = getSortedData(
+        {
+          columnName: columnId,
+          columnType,
+          sortOrder: 'desc',
+          data: this.state.currentData,
+          emptyCells,
+        });
       this.setState({
         currentData: sortedData,
-        sort: { ...this.state.sort, sortOrder: 'desc' },
+        sort: { ...this.state.sort, sortOrder: 'desc', columnType, emptyCells },
       });
 
     } else {
-      const sortedData = orderBy(this.state.currentData, [columnId], ['asc']);
+      // If current sort order is descending then assign next sort order to ascending
+      const sortedData = getSortedData(
+        {
+          columnName: columnId,
+          columnType,
+          sortOrder: 'asc',
+          data: this.state.currentData,
+          emptyCells,
+        });
       this.setState({
         currentData: sortedData,
-        sort: { ...this.state.sort, sortOrder: 'asc' },
+        sort: { ...this.state.sort, sortOrder: 'asc', columnType, emptyCells },
       });
     }
   }
 
   onPagination(value) {
     let { currentPage } = this.state;
-    const noOfPages = getNoOfPages(this.state.currentData, this.state.originalMetaData.recordsPerPage);
+    const noOfPages
+      = getNoOfPages(this.state.currentData, this.state.originalMetaData.recordsPerPage);
     if (value === 'lastPage' && currentPage < noOfPages) {
       currentPage = noOfPages;
     }
@@ -197,6 +235,7 @@ class Table extends Component {
     return (
       <div className={`table-drawer table-drawer__${drawerPosition}`}>
         <TableDrawer
+          onClickAllExport={this.props.onClickAllExport}
           positions={positions}
           currentData={currentData}
           currentMetaData={this.state.currentMetaData}
@@ -212,9 +251,17 @@ class Table extends Component {
     );
   }
 
+  renderLoader() {
+    const { isLoading, currentMetaData: { loaderColor = '#5f8ca6' } } = this.state;
+    if (isLoading) {
+      return <CustomLoader loaderColor={loaderColor} />;
+    }
+    return null;
+  }
   render() {
     return (
       <div className="table">
+        {this.renderLoader()}
         {this.renderTableDrawer(this.state.currentData, this.state.currentMetaData.topDrawer, 'top')}
         <div className="render-table" style={this.props.styles.gridTable}>
           <TableHeader
@@ -245,6 +292,7 @@ class Table extends Component {
 
 Table.propTypes = {
   getSelectedRow: PropTypes.func,
+  onClickAllExport: PropTypes.func,
   data: PropTypes.array,
   metaData: PropTypes.object,
   styles: PropTypes.object,
@@ -252,6 +300,7 @@ Table.propTypes = {
 
 Table.defaultProps = {
   getSelectedRow: () => {},
+  onClickAllExport: () => {},
   data: [],
   metaData: {},
   styles: {},

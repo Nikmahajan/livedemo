@@ -5,6 +5,7 @@ import isEmpty from 'lodash/isEmpty';
 import isEqual from 'lodash/isEqual';
 import { getNoOfPages, addUniqueKey } from './utils/CommonUtils';
 import './datagrid.css';
+import './loader.css';
 import DataGridSection from './components/dataGrid/DataGrid';
 import TableHeader from './components/dataGrid/TableHeader';
 
@@ -18,14 +19,16 @@ const checkValidation = (metaData) => {
   }
 };
 const formattedData = (data, columnsConfig) => {
-  const allkeys = columnsConfig.map((columnConfig) => {
-    const obj = { key: columnConfig.key, type: columnConfig.type };
+  const allKeys = columnsConfig.map((columnConfig) => {
+    const obj = { key: columnConfig.key, type: columnConfig.type, emptyCells: columnConfig.emptyCells};
     return obj;
   });
   return data.map((dataObj) => {
     const dataObjCopy = cloneDeep(dataObj);
-    allkeys.forEach((obj) => {
-      if (dataObjCopy[obj.key] === undefined || dataObjCopy[obj.key] === null) {
+    allKeys.forEach((obj) => {
+      if ((dataObjCopy[obj.key] === undefined || dataObjCopy[obj.key] === null || dataObjCopy[obj.key] === '') && obj.emptyCells) {
+        dataObjCopy[obj.key] = obj.emptyCells;
+      } else if (dataObjCopy[obj.key] === undefined || dataObjCopy[obj.key] === null) {
         dataObjCopy[obj.key] = '';
       }
       if (obj.type === 'Number' && dataObjCopy[obj.key].trim().length !== 0 && !isEmpty(dataObjCopy[obj.key]) && !isNaN(dataObjCopy[obj.key])) {
@@ -69,6 +72,7 @@ class DataGrid extends Component {
         data={tempData}
         metaData={this.props.metaData}
         styles={this.props.styles}
+        onClickAllExport={this.props.onClickAllExport}
       />
     );
   }
@@ -76,6 +80,7 @@ class DataGrid extends Component {
 
 DataGrid.propTypes = {
   getSelectedRow: PropTypes.func,
+  onClickAllExport: PropTypes.func,
   data: PropTypes.array,
   metaData: PropTypes.object,
   styles: PropTypes.object,
@@ -83,6 +88,7 @@ DataGrid.propTypes = {
 
 DataGrid.defaultProps = {
   getSelectedRow: () => {},
+  onClickAllExport: () => {},
   data: [],
   metaData: {},
   styles: {},

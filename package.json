@@ -1,11 +1,10 @@
 {
   "name": "simple-react-data-grid",
-  "version": "2.3.0",
+  "version": "2.6.0",
   "description": "A simple datagrid",
   "main": "build/index.js",
   "dependencies": {
     "lodash": "^4.17.11",
-    "path": "^0.12.7",
     "prop-types": "^15.6.0",
     "react": "^16.6.3",
     "react-csv": "^1.0.19",
@@ -35,7 +34,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "webpack-dev-server --mode development --open --config webpack.config.dev.js",
-    "build": "webpack && webpack --config webpack.config.demo.js"
+    "build": "webpack"
   },
   "keywords": [
     "react"
