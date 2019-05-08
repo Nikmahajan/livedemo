@@ -117,4 +117,4 @@ $ npm install --save simple-react-data-grid
       },
     }
 ### Demo
-#####  [Live Demo](http://google.com)
+#####  [Live Demo](https://github.com/Nikmahajan/livedemo)
