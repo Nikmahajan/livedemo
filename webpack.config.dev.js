@@ -1,8 +1,13 @@
 const HtmlWebPackPlugin = require('html-webpack-plugin');
+const path = require('path');
 
 module.exports = {
   watch: true,
-  entry: ['babel-polyfill', './docs/index.js'],
+  entry: ['babel-polyfill', './demo/index.js'],
+  output: {
+    path: path.resolve(__dirname, 'docs'),
+    filename: 'index.js',
+  },
   devtool: 'source-map',
   resolve: {
     extensions: ['.js', '.json', '.jsx', '.css', '.scss'],
@@ -20,11 +25,15 @@ module.exports = {
         test: /\.css$/,
         use: ['style-loader', 'css-loader'],
       },
+      {
+        test: /\.(jpe?g|png|gif|svg)$/i,
+        loader: 'file-loader?name=/public/icons/[name].[ext]',
+      },
     ],
   },
   plugins: [
     new HtmlWebPackPlugin({
-      template: './docs/index.html',
+      template: './demo/index.html',
       filename: './index.html',
     }),
   ],
